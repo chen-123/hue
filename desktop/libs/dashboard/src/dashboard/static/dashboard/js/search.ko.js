@@ -625,6 +625,30 @@ var Collection = function (vm, collection) {
     });
   }
 
+  self.template.fields = ko.computed(function () {
+    var _fields = [];
+    $.each(self.template.fieldsAttributes(), function (index, field) {
+      var position = self.template.fieldsSelected.indexOf(field.name());
+      if (position != -1) {
+        _fields[position] = field;
+      }
+    });
+    return _fields;
+ });
+
+ self.template.fieldsNames = ko.computed(function () {
+   return $.map(self.template.fieldsAttributes(), function(field) {
+     return field.name();
+   }).sort(function (a, b) {
+     return a.toLowerCase().localeCompare(b.toLowerCase());
+   });
+ });
+
+ self.template.facetFieldsNames = ko.computed(function () {
+//	    return self.template.fieldsNames();
+  return self.template.fieldsAttributes();
+ });
+
   self.template.fieldsSelected.subscribe(function () {
     vm.search();
     if (self.template.moreLikeThis) {
@@ -754,7 +778,7 @@ var Collection = function (vm, collection) {
       // Here we could weight the fields
       facet.properties.facets_form.aggregate.facetFieldsNames = ko.computed(function() {
         return self._getCompatibleMetricFields(facet.properties.facets_form);
-      });
+      }).extend({ trackArrayChanges: true });
 
       facet.properties.facets_form.isEditing = ko.observable(true);
 
@@ -884,20 +908,21 @@ var Collection = function (vm, collection) {
   }
 
   self._getCompatibleMetricFields = function(nestedFacet) {
-  	 if (['avg', 'sum', 'median', 'percentile', 'stddev', 'variance'].indexOf(nestedFacet.aggregate.function()) != -1) {
-   	   return $.grep(self.template.fieldsAttributes(), function(field) {
-   	     return isNumericColumn(field.type()) || isDateTimeColumn(field.type());
-   	   })
-   	   //function (field) {
-   	     //return field.name();
-   	   .sort(function (a, b) {
-   	     return a.name().toLowerCase().localeCompare(b.name().toLowerCase());
-   	   });
-   	 } else {
-  	   return self.template.facetFieldsNames();
-  	 }
+    var fields = null;
+
+  	if (['avg', 'sum', 'median', 'percentile', 'stddev', 'variance'].indexOf(nestedFacet.aggregate.function()) != -1) {
+  	  fields = $.grep(self.template.fieldsAttributes(), function(field) {
+   	    return isNumericColumn(field.type()) || isDateTimeColumn(field.type());
+   	  })
+   	} else {
+   	  fields = self.template.facetFieldsNames();
+  	}
+
+  	return fields.sort(function (a, b) {
+   	  return a.name().toLowerCase().localeCompare(b.name().toLowerCase());
+ 	});
   };
-  
+
   self.facets = ko.mapping.fromJS(collection.facets);
 
   $.each(self.facets(), function (index, facet) {
@@ -1101,7 +1126,7 @@ var Collection = function (vm, collection) {
 
     pivot.aggregate.facetFieldsNames = ko.computed(function() {
       return self._getCompatibleMetricFields(pivot);
-    });
+    }).extend({ trackArrayChanges: true });
     
     facet.properties.facets_form.field(null);
     facet.properties.facets_form.limit(5);
@@ -1195,30 +1220,6 @@ var Collection = function (vm, collection) {
       vm.lastDraggedMeta(null);
     }
   }
-
-  self.template.fields = ko.computed(function () {
-    var _fields = [];
-    $.each(self.template.fieldsAttributes(), function (index, field) {
-      var position = self.template.fieldsSelected.indexOf(field.name());
-      if (position != -1) {
-        _fields[position] = field;
-      }
-    });
-    return _fields;
-  });
-
-  self.template.fieldsNames = ko.computed(function () {
-    return $.map(self.template.fieldsAttributes(), function(field) {
-      return field.name();
-    }).sort(function (a, b) {
-      return a.toLowerCase().localeCompare(b.toLowerCase());
-    });
-  });
-
-  self.template.facetFieldsNames = ko.computed(function () {
-//    return self.template.fieldsNames();
-	  return self.template.fieldsAttributes();
-  });
 
   self.template.sortedGeogFieldsNames = ko.computed(function () {
     return $.map(
